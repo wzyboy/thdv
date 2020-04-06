@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QAction,
-    QGridLayout, QVBoxLayout,
+    QSplitter, QVBoxLayout,
     QLineEdit, QListWidget,
 )
 
@@ -40,22 +40,26 @@ class MainWindow(QMainWindow):
         self.populateDialogList()
         self.diaglogList.itemActivated.connect(self.loadDialog)
 
-        leftPane = QVBoxLayout()
-        leftPane.addWidget(self.searchBar)
-        leftPane.addWidget(self.diaglogList)
+        leftPane = QWidget()
+        leftPaneLayout = QVBoxLayout()
+        leftPaneLayout.addWidget(self.searchBar)
+        leftPaneLayout.addWidget(self.diaglogList)
+        leftPane.setLayout(leftPaneLayout)
 
         # Right pane.
         self.chat = QListWidget()
 
-        rightPane = QVBoxLayout()
-        rightPane.addWidget(self.chat)
+        rightPane = QWidget()
+        rightPaneLayout = QVBoxLayout()
+        rightPaneLayout.addWidget(self.chat)
+        rightPane.setLayout(rightPaneLayout)
 
         # Layouts.
-        mainLayout = QGridLayout()
-        mainLayout.addLayout(leftPane, 0, 0)
-        mainLayout.addLayout(rightPane, 0, 1)
-        mainContainer = QWidget()
-        mainContainer.setLayout(mainLayout)
+        mainContainer = QSplitter()
+        mainContainer.addWidget(leftPane)
+        mainContainer.addWidget(rightPane)
+        mainContainer.setStretchFactor(0, 1)
+        mainContainer.setStretchFactor(1, 3)
 
         # Display the window.
         self.setCentralWidget(mainContainer)
