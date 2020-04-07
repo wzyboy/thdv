@@ -8,12 +8,16 @@ from datetime import datetime
 from collections import OrderedDict
 from collections.abc import Mapping
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import (
+    Qt,
+    QAbstractListModel,
+)
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QAction,
     QSplitter, QVBoxLayout,
     QLineEdit, QListWidget,
+    QListView,
 )
 
 
@@ -47,11 +51,12 @@ class MainWindow(QMainWindow):
         leftPane.setLayout(leftPaneLayout)
 
         # Right pane.
-        self.chat = QListWidget()
+        self.dialog = QListView()
+        self.dialog.setModel(Dialog())
 
         rightPane = QWidget()
         rightPaneLayout = QVBoxLayout()
-        rightPaneLayout.addWidget(self.chat)
+        rightPaneLayout.addWidget(self.dialog)
         rightPane.setLayout(rightPaneLayout)
 
         # Layouts.
@@ -74,11 +79,7 @@ class MainWindow(QMainWindow):
     def loadDialog(self, item):
         dialogId = item.text()
         dialogPath = self.dm[dialogId]
-        with open(dialogPath, 'r') as f:
-            events = [json.loads(line) for line in f]
-        messages = [format_message(event) for event in events]
-        self.chat.clear()
-        self.chat.addItems(messages)
+        self.dialog.model().setPath(dialogPath)
 
 
 def format_message(event):
@@ -131,6 +132,64 @@ class DialogManager(Mapping):
 
     def __len__(self):
         return len(self.peer_fn)
+
+
+class Dialog(QAbstractListModel):
+
+    def __init__(self):
+        super().__init__()
+        self.fd = None
+        self.eof = False
+        self.messages = []
+
+    def setPath(self, path):
+        self.beginResetModel()
+
+        if self.fd:
+            self.fd.close()
+        self.fd = open(path, 'r')
+        self.eof = False
+        self.messages = []
+
+        self.endResetModel()
+
+    def rowCount(self, parent):
+        return len(self.messages)
+
+    def canFetchMore(self, parent):
+        # Always try to fetch more, unless exception raised
+        return bool(self.fd and not self.eof)
+
+    def fetchMore(self, parent):
+        lines = []
+        for i in range(100):
+            try:
+                line = next(self.fd)
+            except StopIteration:
+                self.eof = True
+            else:
+                lines.append(line)
+
+        if not lines:
+            return
+
+        self.beginInsertRows(parent, len(self.messages), len(self.messages) + len(lines) - 1)
+
+        for line in lines:
+            event = json.loads(line)
+            message = format_message(event)
+            self.messages.append(message)
+
+        self.endInsertRows()
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role != Qt.DisplayRole:
+            return
+        if not self.fd:
+            return
+
+        message = self.messages[index.row()]
+        return message
 
 
 if __name__ == '__main__':
