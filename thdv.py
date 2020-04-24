@@ -9,8 +9,8 @@ from collections import OrderedDict
 from collections.abc import Mapping
 
 from PyQt5.QtCore import (
-    Qt,
-    QAbstractListModel,
+    Qt, pyqtSignal,
+    QAbstractListModel, QModelIndex,
 )
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         # Right pane.
         self.dialog = QListView()
         self.dialog.setModel(Dialog())
+        self.dialog.model().status.connect(self.statusBar().showMessage)
 
         rightPane = QWidget()
         rightPaneLayout = QVBoxLayout()
@@ -136,6 +137,8 @@ class DialogManager(Mapping):
 
 class Dialog(QAbstractListModel):
 
+    status = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.fd = None
@@ -150,6 +153,7 @@ class Dialog(QAbstractListModel):
         self.fd = open(path, 'r')
         self.eof = False
         self.messages = []
+        self.status.emit(path)
 
         self.endResetModel()
 
@@ -162,7 +166,7 @@ class Dialog(QAbstractListModel):
 
     def fetchMore(self, parent):
         lines = []
-        for i in range(100):
+        for i in range(1000):
             try:
                 line = next(self.fd)
             except StopIteration:
@@ -179,6 +183,11 @@ class Dialog(QAbstractListModel):
             event = json.loads(line)
             message = format_message(event)
             self.messages.append(message)
+
+        if self.canFetchMore(QModelIndex()):
+            self.status.emit(f'Total: {len(self.messages)}+ messages.')
+        else:
+            self.status.emit(f'Total: {len(self.messages)} messages.')
 
         self.endInsertRows()
 
