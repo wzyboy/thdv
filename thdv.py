@@ -10,6 +10,7 @@ from collections import namedtuple
 from PyQt5.QtCore import (
     Qt, pyqtSignal,
     QAbstractListModel, QModelIndex,
+    QSortFilterProxyModel,
 )
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
@@ -38,11 +39,17 @@ class MainWindow(QMainWindow):
         self.statusBar()
 
         # Left pane.
-        self.searchBar = QLineEdit()
         self.dialogList = QListView()
-        self.dialogList.setModel(DialogList('./output/progress.json'))  # FIXME
+        dialogListModel = DialogList('./output/progress.json')  # FIXME
+        dialogListModel.status.connect(self.statusBar().showMessage)
+        dialogListProxy = QSortFilterProxyModel()
+        dialogListProxy.setSourceModel(dialogListModel)
+        self.dialogList.setModel(dialogListProxy)
         self.dialogList.activated.connect(self.loadDialog)
-        self.dialogList.model().status.connect(self.statusBar().showMessage)
+
+        self.searchBar = QLineEdit()
+        dialogListProxy.setFilterCaseSensitivity(False)
+        self.searchBar.textChanged.connect(lambda s: dialogListProxy.setFilterFixedString(s))
 
         leftPane = QWidget()
         leftPaneLayout = QVBoxLayout()
