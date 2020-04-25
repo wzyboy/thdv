@@ -8,7 +8,7 @@ from datetime import datetime
 from collections import namedtuple
 
 from PyQt5.QtCore import (
-    Qt, pyqtSignal,
+    Qt, pyqtSignal, QTimer,
     QAbstractListModel, QModelIndex,
     QSortFilterProxyModel,
 )
@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
 
         # Left pane.
         self.dialogList = QListView()
+        self.dialogList.setUniformItemSizes(True)
         self.dialogListModel = DialogList('./output/progress.json')  # FIXME
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy = QSortFilterProxyModel()
@@ -59,6 +60,7 @@ class MainWindow(QMainWindow):
 
         # Right pane.
         self.dialog = QListView()
+        self.dialog.setUniformItemSizes(True)
         self.dialogModel = Dialog()
         self.dialogModel.status.connect(self.statusBar().showMessage)
         self.dialogProxy = QSortFilterProxyModel()
@@ -66,8 +68,11 @@ class MainWindow(QMainWindow):
         self.dialog.setModel(self.dialogProxy)
 
         self.searchBar2 = QLineEdit()
+        self.typingTimer2 = QTimer()
+        self.typingTimer2.setSingleShot(True)
+        self.typingTimer2.timeout.connect(lambda: self.dialogProxy.setFilterFixedString(self.searchBar2.text()))
         self.dialogProxy.setFilterCaseSensitivity(False)
-        self.searchBar2.textChanged.connect(self.dialogProxy.setFilterFixedString)
+        self.searchBar2.textChanged.connect(lambda: self.typingTimer2.start(100))
 
         rightPane = QWidget()
         rightPaneLayout = QVBoxLayout()
@@ -158,6 +163,9 @@ class DialogList(QAbstractListModel):
             for k, v in self.dialogs
         ])
         self.items = []
+        self.timer = QTimer()
+        self.timer.timeout.connect(lambda: self.fetchMore(QModelIndex()))
+        self.timer.start(100)
 
     def rowCount(self, parent):
         return len(self.items)
@@ -172,6 +180,7 @@ class DialogList(QAbstractListModel):
                 pair = next(self.peer_fn)
             except StopIteration:
                 self.eof = True
+                self.timer.stop()
             else:
                 pairs.append(pair)
 
@@ -181,10 +190,14 @@ class DialogList(QAbstractListModel):
         self.beginInsertRows(parent, len(self.items), len(self.items) + len(pairs) - 1)
 
         for peer, fn in pairs:
-            self.status.emit(f'Parsing members from {fn} ...')
             name = get_print_name(peer, fn)
             dialogInfo = DialogInfo(peer, fn, name)
             self.items.append(dialogInfo)
+
+        if self.canFetchMore(QModelIndex()):
+            self.status.emit(f'Total: {len(self.items)}+ dialogs.')
+        else:
+            self.status.emit(f'Total: {len(self.items)} dialogs.')
 
         self.endInsertRows()
 
@@ -209,6 +222,8 @@ class Dialog(QAbstractListModel):
         self.fd = None
         self.eof = False
         self.messages = []
+        self.timer = QTimer()
+        self.timer.timeout.connect(lambda: self.fetchMore(QModelIndex()))
 
     def setPath(self, path):
         self.beginResetModel()
@@ -219,6 +234,7 @@ class Dialog(QAbstractListModel):
         self.eof = False
         self.messages = []
         self.status.emit(path)
+        self.timer.start(100)
 
         self.endResetModel()
 
@@ -236,6 +252,7 @@ class Dialog(QAbstractListModel):
                 line = next(self.fd)
             except StopIteration:
                 self.eof = True
+                self.timer.stop()
             else:
                 lines.append(line)
 
