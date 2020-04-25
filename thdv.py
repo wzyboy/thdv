@@ -40,16 +40,16 @@ class MainWindow(QMainWindow):
 
         # Left pane.
         self.dialogList = QListView()
-        dialogListModel = DialogList('./output/progress.json')  # FIXME
-        dialogListModel.status.connect(self.statusBar().showMessage)
-        dialogListProxy = QSortFilterProxyModel()
-        dialogListProxy.setSourceModel(dialogListModel)
-        self.dialogList.setModel(dialogListProxy)
+        self.dialogListModel = DialogList('./output/progress.json')  # FIXME
+        self.dialogListModel.status.connect(self.statusBar().showMessage)
+        self.dialogListProxy = QSortFilterProxyModel()
+        self.dialogListProxy.setSourceModel(self.dialogListModel)
+        self.dialogList.setModel(self.dialogListProxy)
         self.dialogList.activated.connect(self.loadDialog)
 
         self.searchBar = QLineEdit()
-        dialogListProxy.setFilterCaseSensitivity(False)
-        self.searchBar.textChanged.connect(lambda s: dialogListProxy.setFilterFixedString(s))
+        self.dialogListProxy.setFilterCaseSensitivity(False)
+        self.searchBar.textChanged.connect(self.dialogListProxy.setFilterFixedString)
 
         leftPane = QWidget()
         leftPaneLayout = QVBoxLayout()
@@ -59,11 +59,19 @@ class MainWindow(QMainWindow):
 
         # Right pane.
         self.dialog = QListView()
-        self.dialog.setModel(Dialog())
-        self.dialog.model().status.connect(self.statusBar().showMessage)
+        self.dialogModel = Dialog()
+        self.dialogModel.status.connect(self.statusBar().showMessage)
+        self.dialogProxy = QSortFilterProxyModel()
+        self.dialogProxy.setSourceModel(self.dialogModel)
+        self.dialog.setModel(self.dialogProxy)
+
+        self.searchBar2 = QLineEdit()
+        self.dialogProxy.setFilterCaseSensitivity(False)
+        self.searchBar2.textChanged.connect(self.dialogProxy.setFilterFixedString)
 
         rightPane = QWidget()
         rightPaneLayout = QVBoxLayout()
+        rightPaneLayout.addWidget(self.searchBar2)
         rightPaneLayout.addWidget(self.dialog)
         rightPane.setLayout(rightPaneLayout)
 
@@ -82,7 +90,7 @@ class MainWindow(QMainWindow):
 
     def loadDialog(self, item):
         path = item.data(Qt.UserRole)
-        self.dialog.model().setPath(path)
+        self.dialogModel.setPath(path)
 
 
 def format_message(event):
