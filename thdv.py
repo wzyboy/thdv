@@ -5,8 +5,7 @@ import sys
 import json
 import signal
 from datetime import datetime
-from collections import OrderedDict
-from collections.abc import Mapping
+from collections import namedtuple
 
 from PyQt5.QtCore import (
     Qt, pyqtSignal,
@@ -16,7 +15,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QAction,
     QSplitter, QVBoxLayout,
-    QLineEdit, QListWidget,
+    QLineEdit,
     QListView,
 )
 
@@ -40,14 +39,15 @@ class MainWindow(QMainWindow):
 
         # Left pane.
         self.searchBar = QLineEdit()
-        self.diaglogList = QListWidget()
-        self.populateDialogList()
-        self.diaglogList.itemActivated.connect(self.loadDialog)
+        self.dialogList = QListView()
+        self.dialogList.setModel(DialogList('./output/progress.json'))  # FIXME
+        self.dialogList.activated.connect(self.loadDialog)
+        self.dialogList.model().status.connect(self.statusBar().showMessage)
 
         leftPane = QWidget()
         leftPaneLayout = QVBoxLayout()
         leftPaneLayout.addWidget(self.searchBar)
-        leftPaneLayout.addWidget(self.diaglogList)
+        leftPaneLayout.addWidget(self.dialogList)
         leftPane.setLayout(leftPaneLayout)
 
         # Right pane.
@@ -73,14 +73,9 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.show()
 
-    def populateDialogList(self):
-        self.dm = DialogManager('./output/progress.json')  # FIXME
-        self.diaglogList.addItems(self.dm)
-
     def loadDialog(self, item):
-        dialogId = item.text()
-        dialogPath = self.dm[dialogId]
-        self.dialog.model().setPath(dialogPath)
+        path = item.data(Qt.UserRole)
+        self.dialog.model().setPath(path)
 
 
 def format_message(event):
@@ -109,9 +104,32 @@ def format_message(event):
     return msg
 
 
-class DialogManager(Mapping):
+def get_print_name(peer_id, filename):
+    with open(filename, 'r') as f:
+        for line in f:
+            event = json.loads(line)
+            from_ = event['from']
+            to = event['to']
+            if str(to['peer_id']) == peer_id:
+                print_name = to['print_name'] or f'{to["peer_type"]}#{to["peer_id"]}'
+                return print_name
+            if str(from_['peer_id']) == peer_id:
+                print_name = from_['print_name'] or f'{from_["peer_type"]}#{from_["peer_id"]}'
+                return print_name
+        else:
+            return 'UNKNOWN'
+
+
+DialogInfo = namedtuple('DialogInfo', 'id filepath name')
+
+
+class DialogList(QAbstractListModel):
+
+    status = pyqtSignal(str)
 
     def __init__(self, manifest):
+        super().__init__()
+        self.eof = False
         with open(manifest, 'r') as f:
             data = json.load(f)
         self.dialogs = sorted(
@@ -120,19 +138,51 @@ class DialogManager(Mapping):
             reverse=True
         )
         manifest_dir = os.path.dirname(manifest)
-        self.peer_fn = OrderedDict((
+        self.peer_fn = iter([
             (k, os.path.join(manifest_dir, v['dumper_state']['outfile']))
             for k, v in self.dialogs
-        ))
+        ])
+        self.items = []
 
-    def __getitem__(self, k):
-        return self.peer_fn[k]
+    def rowCount(self, parent):
+        return len(self.items)
 
-    def __iter__(self):
-        return iter(self.peer_fn)
+    def canFetchMore(self, parent):
+        return not self.eof
 
-    def __len__(self):
-        return len(self.peer_fn)
+    def fetchMore(self, parent):
+        pairs = []
+        for i in range(5):
+            try:
+                pair = next(self.peer_fn)
+            except StopIteration:
+                self.eof = True
+            else:
+                pairs.append(pair)
+
+        if not pairs:
+            return
+
+        self.beginInsertRows(parent, len(self.items), len(self.items) + len(pairs) - 1)
+
+        for peer, fn in pairs:
+            self.status.emit(f'Parsing members from {fn} ...')
+            name = get_print_name(peer, fn)
+            dialogInfo = DialogInfo(peer, fn, name)
+            self.items.append(dialogInfo)
+
+        self.endInsertRows()
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not self.items:
+            return
+
+        if role == Qt.DisplayRole:
+            return self.items[index.row()].name
+        elif role == Qt.ToolTipRole:
+            return self.items[index.row()].id
+        elif role == Qt.UserRole:
+            return self.items[index.row()].filepath
 
 
 class Dialog(QAbstractListModel):
