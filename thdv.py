@@ -13,7 +13,8 @@ from PyQt5.QtCore import (
     QSortFilterProxyModel,
 )
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget,
+    QApplication, QMainWindow, QWidget, QDialog,
+    QTextEdit,
     QAction,
     QSplitter, QVBoxLayout,
     QLineEdit,
@@ -40,7 +41,7 @@ class MainWindow(QMainWindow):
 
         # Left pane.
         self.dialogList = QListView()
-        self.dialogList.setUniformItemSizes(True)
+        #self.dialogList.setUniformItemSizes(True)
         self.dialogListModel = DialogList('./output/progress.json')  # FIXME
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy = QSortFilterProxyModel()
@@ -66,13 +67,14 @@ class MainWindow(QMainWindow):
         self.dialogProxy = QSortFilterProxyModel()
         self.dialogProxy.setSourceModel(self.dialogModel)
         self.dialog.setModel(self.dialogProxy)
+        self.dialog.activated.connect(lambda item: MessageDetail(item).exec())
 
         self.searchBar2 = QLineEdit()
         self.typingTimer2 = QTimer()
         self.typingTimer2.setSingleShot(True)
         self.typingTimer2.timeout.connect(lambda: self.dialogProxy.setFilterFixedString(self.searchBar2.text()))
         self.dialogProxy.setFilterCaseSensitivity(False)
-        self.searchBar2.textChanged.connect(lambda: self.typingTimer2.start(100))
+        self.searchBar2.textChanged.connect(lambda: self.typingTimer2.start(500))
 
         rightPane = QWidget()
         rightPaneLayout = QVBoxLayout()
@@ -96,6 +98,30 @@ class MainWindow(QMainWindow):
     def loadDialog(self, item):
         path = item.data(Qt.UserRole)
         self.dialogModel.setPath(path)
+
+
+class MessageDetail(QDialog):
+
+    def __init__(self, item):
+        super().__init__()
+
+        message = QTextEdit()
+        message.setReadOnly(True)
+        message.setPlainText(item.data())
+
+        event = QTextEdit()
+        event.setReadOnly(True)
+        eventPretty = json.dumps(item.data(Qt.UserRole), indent=2, ensure_ascii=False)
+        eventMarkdown = f'```\n{eventPretty}\n```'
+        event.setMarkdown(eventMarkdown)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(message)
+        layout.addWidget(event)
+        self.setLayout(layout)
+        self.resize(800, 600)
+
+        self.show()
 
 
 def format_message(event):
@@ -221,6 +247,7 @@ class Dialog(QAbstractListModel):
         super().__init__()
         self.fd = None
         self.eof = False
+        self.events = []
         self.messages = []
         self.timer = QTimer()
         self.timer.timeout.connect(lambda: self.fetchMore(QModelIndex()))
@@ -232,6 +259,7 @@ class Dialog(QAbstractListModel):
             self.fd.close()
         self.fd = open(path, 'r')
         self.eof = False
+        self.events = []
         self.messages = []
         self.status.emit(path)
         self.timer.start(100)
@@ -264,6 +292,7 @@ class Dialog(QAbstractListModel):
         for line in lines:
             event = json.loads(line)
             message = format_message(event)
+            self.events.append(event)
             self.messages.append(message)
 
         if self.canFetchMore(QModelIndex()):
@@ -274,13 +303,12 @@ class Dialog(QAbstractListModel):
         self.endInsertRows()
 
     def data(self, index, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return
         if not self.fd:
             return
-
-        message = self.messages[index.row()]
-        return message
+        if role == Qt.DisplayRole:
+            return self.messages[index.row()]
+        elif role == Qt.UserRole:
+            return self.events[index.row()]
 
 
 if __name__ == '__main__':
