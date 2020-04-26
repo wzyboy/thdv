@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
 
         # Left pane.
         self.dialogList = QListView()
-        #self.dialogList.setUniformItemSizes(True)
+        self.dialogList.setUniformItemSizes(True)
         self.dialogListModel = DialogList('./output/progress.json')  # FIXME
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy = QSortFilterProxyModel()
@@ -207,7 +207,7 @@ class DialogList(QAbstractListModel):
 
     def fetchMore(self, parent):
         pairs = []
-        for i in range(5):
+        for i in range(100):
             try:
                 pair = next(self.peer_fn)
             except StopIteration:
@@ -281,7 +281,7 @@ class Dialog(QAbstractListModel):
 
     def fetchMore(self, parent):
         lines = []
-        for i in range(1000):
+        for i in range(10000):
             try:
                 line = next(self.fd)
             except StopIteration:
