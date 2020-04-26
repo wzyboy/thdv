@@ -91,8 +91,7 @@ class MainWindow(QMainWindow):
 
         # Display the window.
         self.setCentralWidget(mainContainer)
-        self.setWindowFlag(Qt.Dialog)
-        self.resize(800, 600)
+        self.resize(1600, 1200)
         self.show()
 
     def loadDialog(self, item):
@@ -130,13 +129,19 @@ def format_message(event):
     if event_type not in ('message', 'service'):
         return event
 
-    tpl = '[{timestamp}] {from_name}: {payload}'
-
     timestamp = datetime.fromtimestamp(event['date']).strftime('%Y-%m-%d %H:%M:%S')
     try:
         from_name = '{} {}'.format(event['from']['first_name'], event['from']['last_name']).strip()
     except KeyError:
-        from_name = 'user#{}'.format(event['from']['peer_id'])
+        from_name = '{}#{}'.format(event['from']['peer_type'], event['from']['peer_id'])
+    fwd_from = event.get('fwd_from')
+    if fwd_from:
+        try:
+            fwd = ' [FWD: {} {}]'.format(fwd_from['first_name'], fwd_from['last_name']).strip()
+        except KeyError:
+            fwd = ' [FWD: {}#{}]'.format(fwd_from['peer_type'], fwd_from['peer_id'])
+    else:
+        fwd = ''
     payload = event.get(
         'text',
         event.get(
@@ -146,7 +151,8 @@ def format_message(event):
             )
         )
     )
-    msg = tpl.format(timestamp=timestamp, from_name=from_name, payload=payload)
+
+    msg = f'[{timestamp}] {from_name}{fwd}: {payload}'
     return msg
 
 
