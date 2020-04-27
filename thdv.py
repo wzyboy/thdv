@@ -175,7 +175,7 @@ def format_message(event):
 
 
 def get_print_name(peer_id, filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         for line in f:
             event = json.loads(line)
             from_ = event['from']
@@ -200,7 +200,7 @@ class DialogList(QAbstractListModel):
     def __init__(self, manifest):
         super().__init__()
         self.eof = False
-        with open(manifest, 'r') as f:
+        with open(manifest, 'r', encoding='utf-8') as f:
             data = json.load(f)
         self.dialogs = sorted(
             data['dialogs'].items(),
@@ -281,7 +281,7 @@ class Dialog(QAbstractListModel):
 
         if self.fd:
             self.fd.close()
-        self.fd = open(path, 'r')
+        self.fd = open(path, 'r', encoding='utf-8')
         self.eof = False
         self.events = []
         self.messages = []
