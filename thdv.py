@@ -47,45 +47,61 @@ class MainWindow(QMainWindow):
         self.dialogListProxy = QSortFilterProxyModel()
         self.dialogListProxy.setSourceModel(self.dialogListModel)
         self.dialogList.setModel(self.dialogListProxy)
-        self.dialogList.activated.connect(self.loadDialog)
+        self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.UserRole)))
 
-        self.searchBar = QLineEdit()
+        self.searchBar1 = QLineEdit()
+        self.searchBar1.setClearButtonEnabled(True)
         self.dialogListProxy.setFilterCaseSensitivity(False)
-        self.searchBar.textChanged.connect(self.dialogListProxy.setFilterFixedString)
+        self.searchBar1.textChanged.connect(self.dialogListProxy.setFilterFixedString)
 
-        leftPane = QWidget()
-        leftPaneLayout = QVBoxLayout()
-        leftPaneLayout.addWidget(self.searchBar)
-        leftPaneLayout.addWidget(self.dialogList)
-        leftPane.setLayout(leftPaneLayout)
+        self.leftPane = QWidget()
+        self.leftPaneLayout = QVBoxLayout()
+        self.leftPaneLayout.addWidget(self.searchBar1)
+        self.leftPaneLayout.addWidget(self.dialogList)
+        self.leftPane.setLayout(self.leftPaneLayout)
 
         # Right pane.
         self.dialog = QListView()
         self.dialog.setUniformItemSizes(True)
         self.dialogModel = Dialog()
         self.dialogModel.status.connect(self.statusBar().showMessage)
-        self.dialogProxy = QSortFilterProxyModel()
-        self.dialogProxy.setSourceModel(self.dialogModel)
-        self.dialog.setModel(self.dialogProxy)
+        self.dialog.setModel(self.dialogModel)
         self.dialog.activated.connect(lambda item: MessageDetail(item).exec())
 
         self.searchBar2 = QLineEdit()
+        self.searchBar2.setClearButtonEnabled(True)
         self.typingTimer2 = QTimer()
         self.typingTimer2.setSingleShot(True)
-        self.typingTimer2.timeout.connect(lambda: self.dialogProxy.setFilterFixedString(self.searchBar2.text()))
-        self.dialogProxy.setFilterCaseSensitivity(False)
+        self.typingTimer2.timeout.connect(lambda: self.doSearch(self.searchBar2.text()))
         self.searchBar2.textChanged.connect(lambda: self.typingTimer2.start(500))
 
-        rightPane = QWidget()
-        rightPaneLayout = QVBoxLayout()
-        rightPaneLayout.addWidget(self.searchBar2)
-        rightPaneLayout.addWidget(self.dialog)
-        rightPane.setLayout(rightPaneLayout)
+        self.searchResults = QListView()
+        self.searchResults.hide()
+        self.searchResults.setUniformItemSizes(True)
+        self.dialogProxy = QSortFilterProxyModel()
+        self.dialogProxy.setSourceModel(self.dialogModel)
+        self.dialogProxy.setFilterCaseSensitivity(False)
+        self.searchResults.setModel(self.dialogProxy)
+        self.searchResults.activated.connect(lambda item: self.dialog.setCurrentIndex(self.dialogProxy.mapToSource(item)))
+        self.searchResults.activated.connect(
+            lambda item: self.dialog.scrollTo(
+                self.dialogProxy.mapToSource(item), QListView.PositionAtCenter
+            )
+        )
+
+        self.rightPane = QWidget()
+        self.rightPaneLayout = QVBoxLayout()
+        self.rightPaneLayout.addWidget(self.searchBar2)
+        self.rightPaneLayout.addWidget(self.searchResults)
+        self.rightPaneLayout.addWidget(self.dialog)
+        self.rightPaneLayout.setStretch(1, 1)
+        self.rightPaneLayout.setStretch(2, 2)
+        self.rightPane.setLayout(self.rightPaneLayout)
 
         # Layouts.
         mainContainer = QSplitter()
-        mainContainer.addWidget(leftPane)
-        mainContainer.addWidget(rightPane)
+        mainContainer.addWidget(self.leftPane)
+        mainContainer.addWidget(self.rightPane)
         mainContainer.setStretchFactor(0, 1)
         mainContainer.setStretchFactor(1, 3)
 
@@ -94,9 +110,11 @@ class MainWindow(QMainWindow):
         self.resize(1600, 1200)
         self.show()
 
-    def loadDialog(self, item):
-        path = item.data(Qt.UserRole)
-        self.dialogModel.setPath(path)
+    def doSearch(self, text):
+        hasText = bool(text)
+        self.searchResults.setVisible(hasText)
+        if hasText:
+            self.dialogProxy.setFilterFixedString(text)
 
 
 class MessageDetail(QDialog):
