@@ -13,7 +13,8 @@ from PyQt5.QtCore import (
     QSortFilterProxyModel,
 )
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDialog,
+    QApplication, QMainWindow, QWidget,
+    QDialog, QFileDialog, QMessageBox,
     QTextEdit,
     QAction,
     QSplitter, QVBoxLayout,
@@ -42,10 +43,7 @@ class MainWindow(QMainWindow):
         # Left pane.
         self.dialogList = QListView()
         self.dialogList.setUniformItemSizes(True)
-        self.dialogListModel = DialogList('./output/progress.json')  # FIXME
-        self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy = QSortFilterProxyModel()
-        self.dialogListProxy.setSourceModel(self.dialogListModel)
         self.dialogList.setModel(self.dialogListProxy)
         self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.UserRole)))
 
@@ -110,6 +108,50 @@ class MainWindow(QMainWindow):
         self.resize(1600, 1200)
         self.show()
 
+        # Ask for manifest location if default path does not exist
+        manifest = './output/progress.json'
+        if not os.path.exists(manifest):
+            self.askForManifest()
+        else:
+            self.setManifest(manifest)
+
+    def askForManifest(self, firstTime=True):
+        if firstTime:
+            info = QMessageBox()
+            info.setText('./output/progress.json not found.')
+            info.setInformativeText('Please set the location manually.')
+            info.setIcon(QMessageBox.Information)
+            info.setStandardButtons(QMessageBox.Ok | QMessageBox.Abort)
+            info.setDefaultButton(QMessageBox.Ok)
+            infoRc = info.exec()
+            if infoRc == QMessageBox.Abort:
+                sys.exit(1)
+            elif infoRc == QMessageBox.Ok:
+                manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
+        else:
+            manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
+
+        if manifest:
+            self.setManifest(manifest)
+        else:
+            alert = QMessageBox()
+            alert.setText('progress.json not found or invalid.')
+            alert.setInformativeText('Do you want to try again?')
+            alert.setIcon(QMessageBox.Critical)
+            alert.setStandardButtons(QMessageBox.Retry | QMessageBox.Abort)
+            alert.setDefaultButton(QMessageBox.Retry)
+            alert.setEscapeButton(QMessageBox.Abort)
+            alertRc = alert.exec()
+            if alertRc == QMessageBox.Retry:
+                self.askForManifest(firstTime=False)
+            elif alertRc == QMessageBox.Abort:
+                sys.exit(1)
+
+    def setManifest(self, manifest):
+        self.dialogListModel = DialogList(manifest)
+        self.dialogListModel.status.connect(self.statusBar().showMessage)
+        self.dialogListProxy.setSourceModel(self.dialogListModel)
+
     def doSearch(self, text):
         hasText = bool(text)
         self.searchResults.setVisible(hasText)
@@ -137,8 +179,6 @@ class MessageDetail(QDialog):
         layout.addWidget(event)
         self.setLayout(layout)
         self.resize(800, 600)
-
-        self.show()
 
 
 def format_message(event):
