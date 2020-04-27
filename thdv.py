@@ -122,6 +122,7 @@ class MainWindow(QMainWindow):
     def askForManifest(self, firstTime=True):
         if firstTime:
             info = QMessageBox()
+            info.setWindowTitle('Manifest Not Found')
             info.setText('telegram-history-dump manifest file required. (Default: ./output/progress.json)')
             info.setInformativeText(
                 'Press "OK" to select the manifest file (progress.json) manually.\n'
@@ -147,6 +148,8 @@ class MainWindow(QMainWindow):
         self.dialogListModel = DialogList(manifest)
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy.setSourceModel(self.dialogListModel)
+        fullPath = os.path.abspath(manifest)
+        self.setWindowTitle(f'{fullPath} - thdv')
 
     def doSearch(self, text):
         hasText = bool(text)
@@ -175,6 +178,7 @@ class MessageDetail(QDialog):
         layout.addWidget(event)
         self.setLayout(layout)
         self.resize(800, 600)
+        self.setWindowTitle('Message Detail')
 
 
 def format_message(event):
