@@ -29,12 +29,16 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # Menu.
+        openAction = QAction('&Open ...', self)
+        openAction.setShortcut('Ctrl+O')
+        openAction.triggered.connect(lambda: self.askForManifest(firstTime=False))
         quitAction = QAction('&Quit', self)
         quitAction.setShortcut('Ctrl+Q')
         quitAction.triggered.connect(QApplication.quit)
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openAction)
         fileMenu.addAction(quitAction)
 
         # Status.
