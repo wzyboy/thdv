@@ -122,34 +122,26 @@ class MainWindow(QMainWindow):
     def askForManifest(self, firstTime=True):
         if firstTime:
             info = QMessageBox()
-            info.setText('./output/progress.json not found.')
-            info.setInformativeText('Please set the location manually.')
+            info.setText('telegram-history-dump manifest file required. (Default: ./output/progress.json)')
+            info.setInformativeText(
+                'Press "OK" to select the manifest file (progress.json) manually.\n'
+                'Press "Abort" to quit the application.'
+            )
             info.setIcon(QMessageBox.Information)
             info.setStandardButtons(QMessageBox.Ok | QMessageBox.Abort)
             info.setDefaultButton(QMessageBox.Ok)
             infoRc = info.exec()
             if infoRc == QMessageBox.Abort:
                 sys.exit(1)
-            elif infoRc == QMessageBox.Ok:
-                manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
-        else:
-            manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
+
+        manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
 
         if manifest:
             self.setManifest(manifest)
         else:
-            alert = QMessageBox()
-            alert.setText('progress.json not found or invalid.')
-            alert.setInformativeText('Do you want to try again?')
-            alert.setIcon(QMessageBox.Critical)
-            alert.setStandardButtons(QMessageBox.Retry | QMessageBox.Abort)
-            alert.setDefaultButton(QMessageBox.Retry)
-            alert.setEscapeButton(QMessageBox.Abort)
-            alertRc = alert.exec()
-            if alertRc == QMessageBox.Retry:
-                self.askForManifest(firstTime=False)
-            elif alertRc == QMessageBox.Abort:
-                sys.exit(1)
+            # When invoked by File -> Open menu, bail out if user does not select anything
+            if firstTime:
+                self.askForManifest()
 
     def setManifest(self, manifest):
         self.dialogListModel = DialogList(manifest)
