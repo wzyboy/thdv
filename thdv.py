@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.UserRole)))
 
         self.searchBar1 = QLineEdit()
-        self.searchBar1.setPlaceholderText('Search Dialog list')
+        self.searchBar1.setPlaceholderText('Search Dialog List')
         self.searchBar1.setClearButtonEnabled(True)
         self.dialogListProxy.setFilterCaseSensitivity(False)
         self.searchBar1.textChanged.connect(self.dialogListProxy.setFilterFixedString)
