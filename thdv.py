@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.UserRole)))
 
         self.searchBar1 = QLineEdit()
+        self.searchBar1.setPlaceholderText('Search Dialog list')
         self.searchBar1.setClearButtonEnabled(True)
         self.dialogListProxy.setFilterCaseSensitivity(False)
         self.searchBar1.textChanged.connect(self.dialogListProxy.setFilterFixedString)
@@ -71,6 +72,7 @@ class MainWindow(QMainWindow):
         self.dialog.activated.connect(lambda item: MessageDetail(item).exec())
 
         self.searchBar2 = QLineEdit()
+        self.searchBar2.setPlaceholderText('Search Messages')
         self.searchBar2.setClearButtonEnabled(True)
         self.typingTimer2 = QTimer()
         self.typingTimer2.setSingleShot(True)
