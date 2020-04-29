@@ -115,17 +115,26 @@ class MainWindow(QMainWindow):
         self.show()
 
         # Ask for manifest location if default path does not exist
-        manifest = './output/progress.json'
-        if not os.path.exists(manifest):
-            self.askForManifest()
+        paths = [os.path.normpath(path) for path in [
+            os.path.expanduser('~/telegram-history-dump/output/progress.json'),
+            './output/progress.json',
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), 'output/progress.json'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output/progress.json')
+        ]]
+        for path in paths:
+            print(path)
+            manifest = os.path.normpath(path)
+            if os.path.exists(manifest):
+                self.setManifest(manifest)
+                break
         else:
-            self.setManifest(manifest)
+            self.askForManifest()
 
     def askForManifest(self, firstTime=True):
         if firstTime:
             info = QMessageBox()
             info.setWindowTitle('Manifest Not Found')
-            info.setText('telegram-history-dump manifest file required. (Default: ./output/progress.json)')
+            info.setText('I cannot find telegram-history-dump manifest file (progress.json) at default locations.')
             info.setInformativeText(
                 'Press "OK" to select the manifest file (progress.json) manually.\n'
                 'Press "Abort" to quit the application.'
@@ -150,7 +159,7 @@ class MainWindow(QMainWindow):
         self.dialogListModel = DialogList(manifest)
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy.setSourceModel(self.dialogListModel)
-        fullPath = os.path.abspath(manifest)
+        fullPath = os.path.realpath(manifest)
         self.setWindowTitle(f'{fullPath} - thdv')
 
     def doSearch(self, text):
