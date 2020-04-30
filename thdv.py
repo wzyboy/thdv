@@ -199,18 +199,30 @@ def format_message(event):
         return event
 
     timestamp = datetime.fromtimestamp(event['date']).strftime('%Y-%m-%d %H:%M:%S')
+
+    # Message sender.
     try:
         from_name = '{} {}'.format(event['from']['first_name'], event['from']['last_name']).strip()
     except KeyError:
         from_name = '{}#{}'.format(event['from']['peer_type'], event['from']['peer_id'])
+
+    # Is this a forwarded message?
     fwd_from = event.get('fwd_from')
     if fwd_from:
         try:
-            fwd = ' [FWD: {} {}]'.format(fwd_from['first_name'], fwd_from['last_name']).strip()
+            fwd_name = '{} {}'.format(fwd_from['first_name'], fwd_from['last_name']).strip()
         except KeyError:
-            fwd = ' [FWD: {}#{}]'.format(fwd_from['peer_type'], fwd_from['peer_id'])
+            fwd_name = '{}#{}'.format(fwd_from['peer_type'], fwd_from['peer_id'])
+        fwd = f' [FWD: {fwd_name}]'
     else:
         fwd = ''
+
+    # Is this a reply?
+    if event.get('reply_id'):
+        reply = ' [REPLY]'
+    else:
+        reply = ''
+
     payload = event.get(
         'text',
         event.get(
@@ -221,7 +233,7 @@ def format_message(event):
         )
     )
 
-    msg = f'[{timestamp}] {from_name}{fwd}: {payload}'
+    msg = f'[{timestamp}] {from_name}{fwd}{reply}: {payload}'
     return msg
 
 
