@@ -122,7 +122,6 @@ class MainWindow(QMainWindow):
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output/progress.json')
         ]]
         for path in paths:
-            print(path)
             manifest = os.path.normpath(path)
             if os.path.exists(manifest):
                 self.setManifest(manifest)
