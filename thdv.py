@@ -266,7 +266,7 @@ class DialogList(QAbstractListModel):
             data = json.load(f)
         self.dialogs = sorted(
             data['dialogs'].items(),
-            key=lambda x: x[1]['newest_date'],
+            key=lambda x: x[1]['newest_date'] or 0,
             reverse=True
         )
         manifest_dir = os.path.dirname(manifest)
