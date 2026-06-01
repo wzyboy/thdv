@@ -2,8 +2,8 @@
 
 ## Installation
 
-1. Install [Python](https://www.python.org/) and [PySide6](https://pypi.org/project/PySide6/);
-2. Run `thdv.py`.
+1. Install [uv](https://docs.astral.sh/uv/);
+2. Run `uv run thdv`.
 
 ## Tips
 
@@ -14,4 +14,4 @@ The program tries these locations for the telegram-history-dump manifest file on
 - `(program directory)/output/progress.json`
 - `(program symlink directory)/output/progress.json`
 
-If the program cannot find the file at these locations, it prompts your to choose one manually. You could copy / symlink the `output` directory of telegram-history-dump to the program directory; or you could copy / symlink `thdv.py` to the telegram-history-dump directory. Either method prevents the program from asking you for file location.
+If the program cannot find the file at these locations, it prompts your to choose one manually. You could run `thdv` from the telegram-history-dump directory, or copy / symlink the `output` directory of telegram-history-dump to the program directory. Either method prevents the program from asking you for file location.
