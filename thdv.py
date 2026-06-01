@@ -4,28 +4,34 @@ import os
 import sys
 import json
 import signal
+from typing import Any
+from typing import TextIO
 from datetime import datetime
 from collections import namedtuple
 
-from PyQt5.QtCore import (
-    Qt, pyqtSignal, QTimer,
-    QAbstractListModel, QModelIndex,
-    QSortFilterProxyModel,
-)
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget,
-    QDialog, QFileDialog, QMessageBox,
-    QTextEdit,
-    QAction,
-    QSplitter, QVBoxLayout,
-    QLineEdit,
-    QListView,
-)
+from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import Signal
+from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QAbstractListModel
+from PySide6.QtCore import QSortFilterProxyModel
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QListView
+from PySide6.QtWidgets import QSplitter
+from PySide6.QtWidgets import QTextEdit
+from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QAbstractItemView
 
 
 class MainWindow(QMainWindow):
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         # Menu.
@@ -49,12 +55,12 @@ class MainWindow(QMainWindow):
         self.dialogList.setUniformItemSizes(True)
         self.dialogListProxy = QSortFilterProxyModel()
         self.dialogList.setModel(self.dialogListProxy)
-        self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.UserRole)))
+        self.dialogList.activated.connect(lambda item: self.dialogModel.setPath(item.data(Qt.ItemDataRole.UserRole)))
 
         self.searchBar1 = QLineEdit()
         self.searchBar1.setPlaceholderText('Search Dialog List')
         self.searchBar1.setClearButtonEnabled(True)
-        self.dialogListProxy.setFilterCaseSensitivity(False)
+        self.dialogListProxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.searchBar1.textChanged.connect(self.dialogListProxy.setFilterFixedString)
 
         self.leftPane = QWidget()
@@ -84,12 +90,14 @@ class MainWindow(QMainWindow):
         self.searchResults.setUniformItemSizes(True)
         self.dialogProxy = QSortFilterProxyModel()
         self.dialogProxy.setSourceModel(self.dialogModel)
-        self.dialogProxy.setFilterCaseSensitivity(False)
+        self.dialogProxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.searchResults.setModel(self.dialogProxy)
-        self.searchResults.activated.connect(lambda item: self.dialog.setCurrentIndex(self.dialogProxy.mapToSource(item)))
+        self.searchResults.activated.connect(
+            lambda item: self.dialog.setCurrentIndex(self.dialogProxy.mapToSource(item))
+        )
         self.searchResults.activated.connect(
             lambda item: self.dialog.scrollTo(
-                self.dialogProxy.mapToSource(item), QListView.PositionAtCenter
+                self.dialogProxy.mapToSource(item), QAbstractItemView.ScrollHint.PositionAtCenter
             )
         )
 
@@ -115,12 +123,15 @@ class MainWindow(QMainWindow):
         self.show()
 
         # Ask for manifest location if default path does not exist
-        paths = [os.path.normpath(path) for path in [
-            os.path.expanduser('~/telegram-history-dump/output/progress.json'),
-            './output/progress.json',
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), 'output/progress.json'),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output/progress.json')
-        ]]
+        paths = [
+            os.path.normpath(path)
+            for path in [
+                os.path.expanduser('~/telegram-history-dump/output/progress.json'),
+                './output/progress.json',
+                os.path.join(os.path.dirname(os.path.realpath(__file__)), 'output/progress.json'),
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output/progress.json'),
+            ]
+        ]
         for path in paths:
             manifest = os.path.normpath(path)
             if os.path.exists(manifest):
@@ -129,7 +140,7 @@ class MainWindow(QMainWindow):
         else:
             self.askForManifest()
 
-    def askForManifest(self, firstTime=True):
+    def askForManifest(self, firstTime: bool = True) -> None:
         if firstTime:
             info = QMessageBox()
             info.setWindowTitle('Manifest Not Found')
@@ -138,14 +149,19 @@ class MainWindow(QMainWindow):
                 'Press "OK" to select the manifest file (progress.json) manually.\n'
                 'Press "Abort" to quit the application.'
             )
-            info.setIcon(QMessageBox.Information)
-            info.setStandardButtons(QMessageBox.Ok | QMessageBox.Abort)
-            info.setDefaultButton(QMessageBox.Ok)
+            info.setIcon(QMessageBox.Icon.Information)
+            info.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Abort)
+            info.setDefaultButton(QMessageBox.StandardButton.Ok)
             infoRc = info.exec()
-            if infoRc == QMessageBox.Abort:
+            if infoRc == QMessageBox.StandardButton.Abort:
                 sys.exit(1)
 
-        manifest = QFileDialog.getOpenFileName(filter='progress.json (progress.json)')[0]
+        manifest = QFileDialog.getOpenFileName(
+            self,
+            'Open Manifest',
+            '',
+            'progress.json (progress.json)',
+        )[0]
 
         if manifest:
             self.setManifest(manifest)
@@ -154,14 +170,14 @@ class MainWindow(QMainWindow):
             if firstTime:
                 self.askForManifest()
 
-    def setManifest(self, manifest):
+    def setManifest(self, manifest: str) -> None:
         self.dialogListModel = DialogList(manifest)
         self.dialogListModel.status.connect(self.statusBar().showMessage)
         self.dialogListProxy.setSourceModel(self.dialogListModel)
         fullPath = os.path.realpath(manifest)
         self.setWindowTitle(f'{fullPath} - thdv')
 
-    def doSearch(self, text):
+    def doSearch(self, text: str) -> None:
         hasText = bool(text)
         self.searchResults.setVisible(hasText)
         if hasText:
@@ -169,8 +185,7 @@ class MainWindow(QMainWindow):
 
 
 class MessageDetail(QDialog):
-
-    def __init__(self, item):
+    def __init__(self, item: QModelIndex) -> None:
         super().__init__()
 
         message = QTextEdit()
@@ -179,7 +194,11 @@ class MessageDetail(QDialog):
 
         event = QTextEdit()
         event.setReadOnly(True)
-        eventPretty = json.dumps(item.data(Qt.UserRole), indent=2, ensure_ascii=False)
+        eventPretty = json.dumps(
+            item.data(Qt.ItemDataRole.UserRole),
+            indent=2,
+            ensure_ascii=False,
+        )
         eventMarkdown = f'```\n{eventPretty}\n```'
         event.setMarkdown(eventMarkdown)
 
@@ -191,7 +210,7 @@ class MessageDetail(QDialog):
         self.setWindowTitle('Message Detail')
 
 
-def format_message(event):
+def format_message(event: dict[str, Any]) -> str | dict[str, Any]:
 
     event_type = event['event']
     if event_type not in ('message', 'service'):
@@ -222,21 +241,13 @@ def format_message(event):
     else:
         reply = ''
 
-    payload = event.get(
-        'text',
-        event.get(
-            'media',
-            event.get(
-                'action'
-            )
-        )
-    )
+    payload = event.get('text', event.get('media', event.get('action')))
 
     msg = f'[{timestamp}] {from_name}{fwd}{reply}: {payload}'
     return msg
 
 
-def get_print_name(peer_id, filename):
+def get_print_name(peer_id: str, filename: str) -> str:
     with open(filename, 'r', encoding='utf-8') as f:
         for line in f:
             event = json.loads(line)
@@ -256,36 +267,28 @@ DialogInfo = namedtuple('DialogInfo', 'id filepath name')
 
 
 class DialogList(QAbstractListModel):
+    status = Signal(str)
 
-    status = pyqtSignal(str)
-
-    def __init__(self, manifest):
+    def __init__(self, manifest: str) -> None:
         super().__init__()
         self.eof = False
         with open(manifest, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        self.dialogs = sorted(
-            data['dialogs'].items(),
-            key=lambda x: x[1]['newest_date'] or 0,
-            reverse=True
-        )
+        self.dialogs = sorted(data['dialogs'].items(), key=lambda x: x[1]['newest_date'] or 0, reverse=True)
         manifest_dir = os.path.dirname(manifest)
-        self.peer_fn = iter([
-            (k, os.path.join(manifest_dir, v['dumper_state']['outfile']))
-            for k, v in self.dialogs
-        ])
+        self.peer_fn = iter([(k, os.path.join(manifest_dir, v['dumper_state']['outfile'])) for k, v in self.dialogs])
         self.items = []
         self.timer = QTimer()
         self.timer.timeout.connect(lambda: self.fetchMore(QModelIndex()))
         self.timer.start(100)
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QModelIndex) -> int:
         return len(self.items)
 
-    def canFetchMore(self, parent):
+    def canFetchMore(self, parent: QModelIndex) -> bool:
         return not self.eof
 
-    def fetchMore(self, parent):
+    def fetchMore(self, parent: QModelIndex) -> None:
         pairs = []
         for i in range(100):
             try:
@@ -313,32 +316,35 @@ class DialogList(QAbstractListModel):
 
         self.endInsertRows()
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(
+        self,
+        index: QModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> str | None:
         if not self.items:
             return
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.items[index.row()].name
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             return self.items[index.row()].id
-        elif role == Qt.UserRole:
+        elif role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()].filepath
 
 
 class Dialog(QAbstractListModel):
+    status = Signal(str)
 
-    status = pyqtSignal(str)
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.fd = None
+        self.fd: TextIO | None = None
         self.eof = False
         self.events = []
         self.messages = []
         self.timer = QTimer()
         self.timer.timeout.connect(lambda: self.fetchMore(QModelIndex()))
 
-    def setPath(self, path):
+    def setPath(self, path: str) -> None:
         self.beginResetModel()
 
         if self.fd:
@@ -352,14 +358,14 @@ class Dialog(QAbstractListModel):
 
         self.endResetModel()
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QModelIndex) -> int:
         return len(self.messages)
 
-    def canFetchMore(self, parent):
+    def canFetchMore(self, parent: QModelIndex) -> bool:
         # Always try to fetch more, unless exception raised
         return bool(self.fd and not self.eof)
 
-    def fetchMore(self, parent):
+    def fetchMore(self, parent: QModelIndex) -> None:
         lines = []
         for i in range(10000):
             try:
@@ -388,12 +394,16 @@ class Dialog(QAbstractListModel):
 
         self.endInsertRows()
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(
+        self,
+        index: QModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> str | dict[str, Any] | None:
         if not self.fd:
             return
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.messages[index.row()]
-        elif role == Qt.UserRole:
+        elif role == Qt.ItemDataRole.UserRole:
             return self.events[index.row()]
 
 

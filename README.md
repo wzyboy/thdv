@@ -2,7 +2,7 @@
 
 ## Installation
 
-1. Install [Python](https://www.python.org/) and [PyQt5](https://pypi.org/project/PyQt5/);
+1. Install [Python](https://www.python.org/) and [PySide6](https://pypi.org/project/PySide6/);
 2. Run `thdv.py`.
 
 ## Tips
