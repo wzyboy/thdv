@@ -1,35 +1,33 @@
-from __future__ import annotations
-
-import json
 import sys
+import json
 from pathlib import Path
 
-from PySide6.QtCore import QModelIndex
-from PySide6.QtCore import QSortFilterProxyModel
-from PySide6.QtCore import Qt
-from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import QAbstractItemView
+from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QSortFilterProxyModel
 from PySide6.QtWidgets import QDialog
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QWidget
 from PySide6.QtWidgets import QLineEdit
 from PySide6.QtWidgets import QListView
-from PySide6.QtWidgets import QMainWindow
-from PySide6.QtWidgets import QMessageBox
-from PySide6.QtWidgets import QApplication
 from PySide6.QtWidgets import QSplitter
 from PySide6.QtWidgets import QTextEdit
+from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMessageBox
 from PySide6.QtWidgets import QVBoxLayout
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QAbstractItemView
 
+from .rows import DialogRow
+from .rows import MessageRow
+from .models import DialogListModel
+from .models import MessageListModel
 from .history import load_manifest_entries
 from .loaders import DialogLoader
 from .loaders import MessageLoader
-from .models import DialogListModel
-from .models import MessageListModel
-from .rows import DialogRow
-from .rows import MessageRow
 
 
 class MainWindow(QMainWindow):

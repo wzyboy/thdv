@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 from typing import Any
 
-from PySide6.QtCore import QAbstractListModel
-from PySide6.QtCore import QModelIndex
-from PySide6.QtCore import QPersistentModelIndex
 from PySide6.QtCore import Qt
+from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QAbstractListModel
+from PySide6.QtCore import QPersistentModelIndex
 
 from .rows import DialogRow
 from .rows import MessageRow

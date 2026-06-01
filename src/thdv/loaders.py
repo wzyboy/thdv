@@ -1,18 +1,16 @@
-from __future__ import annotations
-
 from pathlib import Path
 from threading import Event
 from threading import Thread
 
-from PySide6.QtCore import QObject
 from PySide6.QtCore import Signal
+from PySide6.QtCore import QObject
 
-from .history import build_dialog_row
-from .history import format_message
-from .history import read_json_line
-from .rows import DialogManifestEntry
 from .rows import DialogRow
 from .rows import MessageRow
+from .rows import DialogManifestEntry
+from .history import format_message
+from .history import read_json_line
+from .history import build_dialog_row
 
 DIALOG_BATCH_SIZE = 25
 MESSAGE_BATCH_SIZE = 1_000

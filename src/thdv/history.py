@@ -1,13 +1,11 @@
-from __future__ import annotations
-
 import json
-from datetime import datetime
-from pathlib import Path
 from typing import Any
+from pathlib import Path
+from datetime import datetime
 
-from .rows import DialogManifestEntry
 from .rows import DialogRow
 from .rows import MessageRow
+from .rows import DialogManifestEntry
 
 
 def _peer_display_name(peer: Any) -> str:
